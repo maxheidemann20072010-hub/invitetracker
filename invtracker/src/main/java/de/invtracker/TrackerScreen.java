@@ -1,5 +1,6 @@
 package de.invtracker;
 
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -73,8 +74,9 @@ public class TrackerScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (super.mouseClicked(mx, my, button)) return true;
+    public boolean mouseClicked(Click click, boolean doubled) {
+        if (super.mouseClicked(click, doubled)) return true;
+        double mx = click.x(), my = click.y();
         int c = (int) ((mx - gridX) / CELL), r = (int) ((my - gridY) / CELL);
         if (mx >= gridX && my >= gridY && c < cols && r < visibleRows) {
             int idx = (r + scrollRows) * cols + c;

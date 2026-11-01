@@ -1,8 +1,7 @@
-1. Auf github.com einloggen und ein neues Repository erstellen (Name egal).
-2. "uploading an existing file" klicken und ALLE Dateien/Ordner aus dem
-   Zip hochladen (wichtig: auch den versteckten Ordner .github).
-3. Oben auf "Actions" klicken, warten bis der Haken gruen ist (ca. 3-5 Min).
-4. Den Lauf anklicken, unten bei "Artifacts" -> invtracker-jar herunterladen.
-5. Zip entpacken, die invtracker-1.0.0.jar in den mods-Ordner legen.
-   Voraussetzung: Fabric Loader + Fabric API fuer Minecraft 1.21.4.
-Taste K = Item-Auswahl.
+Update fuer Minecraft 1.21.11:
+1. Diesen Ordner "invtracker" (nicht den Inhalt, den ganzen Ordner) auf GitHub
+   in "Upload files" ziehen und "Commit changes" klicken. Er ersetzt die alten Dateien.
+2. In .github/workflows/build.yml die Zeile "gradle-version: 8.12" auf
+   "gradle-version: 9.2.1" aendern und committen.
+3. Actions -> neuer gruener Haken -> invtracker-jar herunterladen.
+4. ALTE invtracker-jar aus dem mods-Ordner loeschen, neue hineinlegen.

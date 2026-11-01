@@ -47,7 +47,8 @@ public class InvTrackerClient implements ClientModInitializer {
         if (tracked.isEmpty()) tracked.add("minecraft:totem_of_undying");
 
         openKey = KeyBindingHelper.registerKeyBinding(
-                new KeyBinding("key.invtracker.open", GLFW.GLFW_KEY_K, "category.invtracker"));
+                new KeyBinding("key.invtracker.open", GLFW.GLFW_KEY_K,
+                        KeyBinding.Category.create(Identifier.of("invtracker", "main"))));
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             while (openKey.wasPressed()) mc.setScreen(new TrackerScreen());
