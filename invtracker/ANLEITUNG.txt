@@ -1,3 +1,4 @@
 U = /invsee auf den Spieler im Fadenkreuz (sonst der zuletzt benutzte).
-J = die letzten 3 angesehenen Inventare nebeneinander. Jedes Oeffnen eines Inventars
-aktualisiert dessen Eintrag. Tasten aendern: Optionen -> Steuerung -> Tastenbelegung -> Inv Tracker.
+J = die letzten 3 angesehenen Inventare nebeneinander.
+J nochmal druecken, waehrend das Fenster offen ist = alle 3 werden automatisch neu eingelesen.
+Tasten aendern: Optionen -> Steuerung -> Tastenbelegung -> Inv Tracker.

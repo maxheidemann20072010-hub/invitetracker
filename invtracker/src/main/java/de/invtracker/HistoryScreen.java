@@ -1,9 +1,13 @@
 package de.invtracker;
 
+import net.minecraft.client.MinecraftClient;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
+
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,14 +17,36 @@ public class HistoryScreen extends Screen {
 
     private static final int SLOT = 18, COLS = 9, GAP = 14;
 
+    private boolean wasDown;
+
     public HistoryScreen() {
         super(Text.literal("Letzte Inventare"));
+        wasDown = isDown(); // die Taste ist beim Öffnen noch gedrückt
+    }
+
+    /** Ist die Taste für dieses Fenster gerade gedrückt? */
+    private static boolean isDown() {
+        int code = KeyBindingHelper.getBoundKeyOf(InvTrackerClient.historyKey).getCode();
+        if (code < 0) return false;
+        long handle = MinecraftClient.getInstance().getWindow().getHandle();
+        return GLFW.glfwGetKey(handle, code) == GLFW.GLFW_PRESS;
     }
 
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
+        // Taste nochmal gedrückt = alle Inventare neu einlesen
+        boolean down = isDown();
+        if (down && !wasDown) {
+            wasDown = true;
+            InvTrackerClient.startRefresh(MinecraftClient.getInstance());
+            return;
+        }
+        wasDown = down;
+
         super.render(ctx, mx, my, delta);
         ctx.drawCenteredTextWithShadow(textRenderer, title, width / 2, 8, 0xFFFFFFFF);
+        ctx.drawCenteredTextWithShadow(textRenderer, "Taste nochmal drücken = alle aktualisieren",
+                width / 2, height - 14, 0xFFAAAAAA);
 
         List<InvTrackerClient.Entry> list = new ArrayList<>(InvTrackerClient.history);
         if (list.isEmpty()) {

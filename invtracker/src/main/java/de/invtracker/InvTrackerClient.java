@@ -26,7 +26,14 @@ public class InvTrackerClient implements ClientModInitializer {
 
     private static String pendingTarget;
     private static String lastName;
-    private static KeyBinding invseeKey, historyKey;
+    private static KeyBinding invseeKey;
+    public static KeyBinding historyKey;
+
+    // Aktualisieren aller gemerkten Inventare (Taste im J-Fenster nochmal drücken)
+    private static final Deque<String> refreshQueue = new ArrayDeque<>();
+    private static boolean refreshing;
+    private static String refreshCurrent;
+    private static int refreshTicks, refreshOpenTicks;
 
     /** Ein gemerktes Inventar. */
     public static class Entry {
@@ -49,8 +56,13 @@ public class InvTrackerClient implements ClientModInitializer {
                 new KeyBinding("key.invtracker.history", GLFW.GLFW_KEY_J, cat));
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-            while (historyKey.wasPressed()) mc.setScreen(new HistoryScreen());
-            while (invseeKey.wasPressed()) invseeAimed(mc);
+            if (refreshing) refreshTick(mc);
+            while (historyKey.wasPressed()) {
+                if (!refreshing) mc.setScreen(new HistoryScreen());
+            }
+            while (invseeKey.wasPressed()) {
+                if (!refreshing) invseeAimed(mc);
+            }
         });
 
         // Merkt sich, wessen Inventar du mit /invsee öffnest
@@ -106,8 +118,56 @@ public class InvTrackerClient implements ClientModInitializer {
             mc.player.sendMessage(Text.literal("Inv-Tracker: Schau einen Spieler an"), true);
             return;
         }
+        sendInvsee(mc, name);
+    }
+
+    private static void sendInvsee(MinecraftClient mc, String name) {
         lastName = name;
         pendingTarget = name;
         mc.player.networkHandler.sendChatCommand("invsee " + name);
+    }
+
+    /** Wird aus dem J-Fenster aufgerufen: alle gemerkten Inventare der Reihe nach neu einlesen. */
+    public static void startRefresh(MinecraftClient mc) {
+        if (refreshing || mc.player == null || history.isEmpty()) return;
+        refreshQueue.clear();
+        // Älteste zuerst, damit die Reihenfolge danach gleich bleibt
+        Iterator<Entry> it = history.descendingIterator();
+        while (it.hasNext()) refreshQueue.add(it.next().name);
+        refreshing = true;
+        refreshCurrent = null;
+        mc.setScreen(null);
+        mc.player.sendMessage(Text.literal("Inv-Tracker: aktualisiere Inventare …"), true);
+    }
+
+    private static void refreshTick(MinecraftClient mc) {
+        if (mc.player == null) {
+            refreshing = false;
+            refreshQueue.clear();
+            return;
+        }
+        if (refreshCurrent == null) {
+            String next = refreshQueue.poll();
+            if (next == null) {
+                refreshing = false;
+                mc.setScreen(new HistoryScreen());
+                return;
+            }
+            refreshCurrent = next;
+            refreshTicks = 0;
+            refreshOpenTicks = 0;
+            sendInvsee(mc, next);
+            return;
+        }
+        refreshTicks++;
+        if (mc.currentScreen instanceof GenericContainerScreen) {
+            refreshOpenTicks++;
+            if (refreshOpenTicks >= 8) { // Inhalt ist geladen: schließen, Stand wird dabei gespeichert
+                mc.player.closeHandledScreen();
+                refreshCurrent = null;
+            }
+        } else if (refreshTicks > 60) {  // Spieler nicht erreichbar: überspringen
+            refreshCurrent = null;
+        }
     }
 }
