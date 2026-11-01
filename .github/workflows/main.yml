@@ -5,6 +5,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: invtracker
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -18,4 +21,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: invtracker-jar
-          path: build/libs/invtracker-1.0.0.jar
+          path: invtracker/build/libs/invtracker-1.0.0.jar
