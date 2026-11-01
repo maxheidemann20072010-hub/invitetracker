@@ -1,4 +1,5 @@
 {
-  "key.invtracker.open": "Inv Tracker öffnen",
+  "key.invtracker.invsee": "InvSee auf Spieler im Fadenkreuz",
+  "key.invtracker.history": "Letzte 3 Inventare gleichzeitig",
   "key.category.invtracker.main": "Inv Tracker"
 }

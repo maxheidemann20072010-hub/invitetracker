@@ -1,7 +1,5 @@
-Update fuer Minecraft 1.21.11:
-1. Diesen Ordner "invtracker" (nicht den Inhalt, den ganzen Ordner) auf GitHub
-   in "Upload files" ziehen und "Commit changes" klicken. Er ersetzt die alten Dateien.
-2. In .github/workflows/build.yml die Zeile "gradle-version: 8.12" auf
-   "gradle-version: 9.2.1" aendern und committen.
-3. Actions -> neuer gruener Haken -> invtracker-jar herunterladen.
-4. ALTE invtracker-jar aus dem mods-Ordner loeschen, neue hineinlegen.
+U = /invsee auf den Spieler im Fadenkreuz, J = letzte 3 Inventare gleichzeitig.
+Die Mod zeigt automatisch, was seit dem vorigen Scan weniger geworden ist (z. B. -1 Totem).
+Tasten aendern: Optionen -> Steuerung -> Tastenbelegung -> Inv Tracker.
+Update: den ganzen Ordner "invtracker" auf GitHub in "Upload files" ziehen, Commit changes,
+unter Actions auf den gruenen Haken warten, invtracker-jar laden, alte jar aus mods loeschen.
