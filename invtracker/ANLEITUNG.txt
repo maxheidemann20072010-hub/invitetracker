@@ -1,5 +1,7 @@
 Inv Tracker:
 - U = /invsee auf den Spieler im Fadenkreuz (sonst der zuletzt benutzte)
 - J = die letzten 3 angesehenen Inventare nebeneinander; J nochmal = alle aktualisieren
-- Links neben jedem Inventar steht, wie viel von jeder Sache der Spieler hat (z. B. 36 Enderperle)
+- Links neben jedem Inventar steht klein, wie viel von jeder Sache der Spieler hat
+- K (oder Button "Anzeige links waehlen" im J-Fenster) = auswaehlen, was links angezeigt wird.
+  Nichts gewaehlt = alles wird angezeigt.
 Tasten aendern: Optionen -> Steuerung -> Tastenbelegung -> Inv Tracker.

@@ -4,6 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 
@@ -15,13 +16,20 @@ import java.util.List;
 /** Taste J: die letzten 3 angesehenen Inventare nebeneinander. */
 public class HistoryScreen extends Screen {
 
-    private static final int SLOT = 18, COLS = 9, GAP = 14, LIST_W = 120, LIST_GAP = 6;
+    private static final int SLOT = 18, COLS = 9, GAP = 14, LIST_GAP = 6, LIST_MAX = 84, LIST_MIN = 50;
 
     private boolean wasDown;
 
     public HistoryScreen() {
         super(Text.literal("Letzte Inventare"));
         wasDown = isDown(); // die Taste ist beim Öffnen noch gedrückt
+    }
+
+    @Override
+    protected void init() {
+        addDrawableChild(ButtonWidget.builder(Text.literal("Anzeige links wählen"),
+                b -> MinecraftClient.getInstance().setScreen(new TrackerScreen(this)))
+                .dimensions(width - 136, 6, 130, 18).build());
     }
 
     /** Ist die Taste für dieses Fenster gerade gedrückt? */
@@ -55,8 +63,16 @@ public class HistoryScreen extends Screen {
         }
 
         int panelW = COLS * SLOT;
-        int blockW = LIST_W + LIST_GAP + panelW;   // Liste links + Inventar
-        int n = Math.max(1, Math.min(list.size(), (width - 20 + GAP) / (blockW + GAP)));
+        int count = list.size();
+        // Die Liste links wird so schmal wie nötig, damit alle Inventare nebeneinander passen
+        int listW = (width - 20 - (count - 1) * GAP) / count - LIST_GAP - panelW;
+        listW = Math.min(LIST_MAX, listW);
+        int n = count;
+        if (listW < LIST_MIN) {
+            listW = LIST_MIN;
+            n = Math.max(1, Math.min(count, (width - 20 + GAP) / (LIST_MIN + LIST_GAP + panelW + GAP)));
+        }
+        int blockW = listW + LIST_GAP + panelW;
         int totalW = n * blockW + (n - 1) * GAP;
         int x0 = (width - totalW) / 2;
         ItemStack hovered = null;
@@ -64,7 +80,7 @@ public class HistoryScreen extends Screen {
         for (int i = 0; i < n; i++) {
             InvTrackerClient.Entry e = list.get(i);
             int bx = x0 + i * (blockW + GAP);
-            int x = bx + LIST_W + LIST_GAP;           // Inventar-Raster
+            int x = bx + listW + LIST_GAP;           // Inventar-Raster
             int y = 28;
 
             ctx.drawText(textRenderer, e.name, x, y, 0xFFFFFF55, true);
@@ -72,8 +88,8 @@ public class HistoryScreen extends Screen {
 
             int gy = y + 26;
             // links neben dem Inventar: wie viel von jeder Sache
-            InvTrackerClient.drawCounts(ctx, textRenderer, bx, gy + 8, e.stacks, LIST_W,
-                    Math.max(3, (height - gy - 30) / 16));
+            InvTrackerClient.drawCounts(ctx, textRenderer, bx, gy + 8, e.stacks, listW,
+                    Math.max(3, (height - gy - 30) / InvTrackerClient.ROW_H));
             int rows = (e.stacks.size() + COLS - 1) / COLS;
             ctx.fill(x - 1, gy - 1, x + panelW + 1, gy + rows * SLOT + 1, 0x66000000);
 

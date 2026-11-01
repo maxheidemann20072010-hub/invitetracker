@@ -1,5 +1,6 @@
 {
   "key.invtracker.invsee": "InvSee player you look at",
   "key.invtracker.history": "Show last 3 inventories at once",
-  "key.category.invtracker.main": "Inv Tracker"
+  "key.category.invtracker.main": "Inv Tracker",
+  "key.invtracker.open": "Choose what is listed on the left"
 }

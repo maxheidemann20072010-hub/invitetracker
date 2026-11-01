@@ -1,10 +1,13 @@
 package de.invtracker;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -16,9 +19,12 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.hit.EntityHitResult;
 import org.lwjgl.glfw.GLFW;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 public class InvTrackerClient implements ClientModInitializer {
@@ -29,6 +35,11 @@ public class InvTrackerClient implements ClientModInitializer {
 
     private static String pendingTarget;
     private static String lastName;
+    /** Sachen, deren Menge links angezeigt wird (leer = alles anzeigen). */
+    public static final Set<String> tracked = new LinkedHashSet<>();
+    private static final Path CFG = FabricLoader.getInstance().getConfigDir().resolve("invtracker.json");
+    private static final Gson GSON = new Gson();
+    public static KeyBinding openKey;
     public static KeyBinding invseeKey;
     public static KeyBinding historyKey;
 
@@ -52,7 +63,10 @@ public class InvTrackerClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        loadConfig();
         KeyBinding.Category cat = KeyBinding.Category.create(Identifier.of("invtracker", "main"));
+        openKey = KeyBindingHelper.registerKeyBinding(
+                new KeyBinding("key.invtracker.open", GLFW.GLFW_KEY_K, cat));
         invseeKey = KeyBindingHelper.registerKeyBinding(
                 new KeyBinding("key.invtracker.invsee", GLFW.GLFW_KEY_U, cat));
         historyKey = KeyBindingHelper.registerKeyBinding(
@@ -60,6 +74,9 @@ public class InvTrackerClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             if (refreshing) refreshTick(mc);
+            while (openKey.wasPressed()) {
+                if (!refreshing && mc.currentScreen == null) mc.setScreen(new TrackerScreen(null));
+            }
             while (historyKey.wasPressed()) {
                 if (!refreshing) mc.setScreen(new HistoryScreen());
             }
@@ -99,8 +116,8 @@ public class InvTrackerClient implements ClientModInitializer {
                 if (st.ticks < 3) return;
                 TextRenderer tr = mc.textRenderer;
                 ctx.drawText(tr, "Inhalt: " + target, 6, 30, 0xFFFFFF55, true);
-                drawCounts(ctx, tr, 6, 46, st.stacks, Math.max(100, (s.width - 176) / 2 - 12),
-                        Math.max(3, (s.height - 70) / 16));
+                drawCounts(ctx, tr, 6, 46, st.stacks, Math.max(90, (s.width - 176) / 2 - 12),
+                        Math.max(3, (s.height - 70) / ROW_H));
             });
 
             // Beim Schließen: Inventar in die Liste der letzten 3 aufnehmen (ersetzt den alten Stand)
@@ -183,31 +200,75 @@ public class InvTrackerClient implements ClientModInitializer {
         }
     }
 
-    /** Zählt auf, wie viel von jeder Sache vorhanden ist, z. B. "36 Enderperle" (größte Menge zuerst). */
+    /** Zeilenhöhe der kleinen Liste links. */
+    public static final int ROW_H = 11;
+    private static final float SMALL = 0.65f;
+
+    /** Eine kleine Zeile (Icon + Text), verkleinert gezeichnet. */
+    private static void smallRow(DrawContext ctx, TextRenderer tr, int x, int y,
+                                 ItemStack icon, String text, int color, int w) {
+        var m = ctx.getMatrices();
+        m.pushMatrix();
+        m.translate(x, y);
+        m.scale(SMALL, SMALL);
+        if (icon != null) ctx.drawItem(icon, 0, -3);
+        ctx.drawText(tr, tr.trimToWidth(text, (int) (w / SMALL) - 20), icon != null ? 18 : 0, 0, color, true);
+        m.popMatrix();
+    }
+
+    /**
+     * Zeigt klein, wie viel der Spieler von jeder Sache hat, z. B. "36 Enderperle".
+     * Ist in der Auswahl (Taste K) etwas gewählt, erscheinen nur diese Sachen (auch mit 0), sonst alles.
+     */
     public static void drawCounts(DrawContext ctx, TextRenderer tr, int x, int y,
-                                  List<ItemStack> stacks, int maxW, int maxLines) {
+                                  List<ItemStack> stacks, int w, int maxLines) {
         Map<Item, Integer> totals = new HashMap<>();
         for (ItemStack st : stacks) {
             if (!st.isEmpty()) totals.merge(st.getItem(), st.getCount(), Integer::sum);
         }
-        if (totals.isEmpty()) {
-            ctx.drawText(tr, "Leer", x, y, 0xFFAAAAAA, true);
+
+        List<Map.Entry<Item, Integer>> list = new ArrayList<>();
+        if (tracked.isEmpty()) {
+            list.addAll(totals.entrySet());
+        } else {
+            for (String id : tracked) {
+                Item item = Registries.ITEM.get(Identifier.of(id));
+                list.add(Map.entry(item, totals.getOrDefault(item, 0)));
+            }
+        }
+        if (list.isEmpty()) {
+            smallRow(ctx, tr, x, y, null, "Leer", 0xFFAAAAAA, w);
             return;
         }
-        List<Map.Entry<Item, Integer>> list = new ArrayList<>(totals.entrySet());
         list.sort((a, b) -> b.getValue() - a.getValue());
 
         int shown = 0;
         for (Map.Entry<Item, Integer> e : list) {
             if (shown >= maxLines) {
-                ctx.drawText(tr, "… +" + (list.size() - shown) + " weitere", x, y, 0xFFAAAAAA, true);
+                smallRow(ctx, tr, x, y, null, "… +" + (list.size() - shown) + " weitere", 0xFFAAAAAA, w);
                 break;
             }
-            ctx.drawItem(new ItemStack(e.getKey()), x, y - 4);
-            ctx.drawText(tr, tr.trimToWidth(e.getValue() + " " + e.getKey().getName().getString(), maxW - 20),
-                    x + 20, y, 0xFFFFFFFF, true);
-            y += 16;
+            int color = e.getValue() == 0 ? 0xFF888888 : 0xFFFFFFFF;
+            smallRow(ctx, tr, x, y, new ItemStack(e.getKey()),
+                    e.getValue() + " " + e.getKey().getName().getString(), color, w);
+            y += ROW_H;
             shown++;
         }
+    }
+
+    // ---- Config ----
+    public static void saveConfig() {
+        try {
+            Files.writeString(CFG, GSON.toJson(new ArrayList<>(tracked)));
+        } catch (Exception ignored) {}
+    }
+
+    private static void loadConfig() {
+        try {
+            if (Files.exists(CFG)) {
+                List<String> l = GSON.fromJson(Files.readString(CFG), new TypeToken<List<String>>() {}.getType());
+                if (l != null) tracked.addAll(l);
+            }
+        } catch (Exception ignored) {}
     }
 }
