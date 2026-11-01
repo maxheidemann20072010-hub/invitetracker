@@ -1,4 +1,5 @@
-Inv Tracker (ohne Crystal-Funktion):
+Inv Tracker:
 - U = /invsee auf den Spieler im Fadenkreuz (sonst der zuletzt benutzte)
 - J = die letzten 3 angesehenen Inventare nebeneinander; J nochmal = alle aktualisieren
+- Links neben jedem Inventar steht, wie viel von jeder Sache der Spieler hat (z. B. 36 Enderperle)
 Tasten aendern: Optionen -> Steuerung -> Tastenbelegung -> Inv Tracker.

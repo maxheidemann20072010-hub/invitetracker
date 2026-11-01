@@ -6,10 +6,13 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -91,6 +94,15 @@ public class InvTrackerClient implements ClientModInitializer {
                 st.stacks = copy;
             });
 
+            // Links neben dem Inventar: wie viel von jeder Sache der Spieler hat
+            ScreenEvents.afterRender(screen).register((s, ctx, mx, my, delta) -> {
+                if (st.ticks < 3) return;
+                TextRenderer tr = mc.textRenderer;
+                ctx.drawText(tr, "Inhalt: " + target, 6, 30, 0xFFFFFF55, true);
+                drawCounts(ctx, tr, 6, 46, st.stacks, Math.max(100, (s.width - 176) / 2 - 12),
+                        Math.max(3, (s.height - 70) / 16));
+            });
+
             // Beim Schließen: Inventar in die Liste der letzten 3 aufnehmen (ersetzt den alten Stand)
             ScreenEvents.remove(screen).register(s -> {
                 if (st.ticks < 3) return;
@@ -168,6 +180,34 @@ public class InvTrackerClient implements ClientModInitializer {
             }
         } else if (refreshTicks > 60) {  // Spieler nicht erreichbar: überspringen
             refreshCurrent = null;
+        }
+    }
+
+    /** Zählt auf, wie viel von jeder Sache vorhanden ist, z. B. "36 Enderperle" (größte Menge zuerst). */
+    public static void drawCounts(DrawContext ctx, TextRenderer tr, int x, int y,
+                                  List<ItemStack> stacks, int maxW, int maxLines) {
+        Map<Item, Integer> totals = new HashMap<>();
+        for (ItemStack st : stacks) {
+            if (!st.isEmpty()) totals.merge(st.getItem(), st.getCount(), Integer::sum);
+        }
+        if (totals.isEmpty()) {
+            ctx.drawText(tr, "Leer", x, y, 0xFFAAAAAA, true);
+            return;
+        }
+        List<Map.Entry<Item, Integer>> list = new ArrayList<>(totals.entrySet());
+        list.sort((a, b) -> b.getValue() - a.getValue());
+
+        int shown = 0;
+        for (Map.Entry<Item, Integer> e : list) {
+            if (shown >= maxLines) {
+                ctx.drawText(tr, "… +" + (list.size() - shown) + " weitere", x, y, 0xFFAAAAAA, true);
+                break;
+            }
+            ctx.drawItem(new ItemStack(e.getKey()), x, y - 4);
+            ctx.drawText(tr, tr.trimToWidth(e.getValue() + " " + e.getKey().getName().getString(), maxW - 20),
+                    x + 20, y, 0xFFFFFFFF, true);
+            y += 16;
+            shown++;
         }
     }
 }

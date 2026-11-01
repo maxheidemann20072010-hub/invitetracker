@@ -15,7 +15,7 @@ import java.util.List;
 /** Taste J: die letzten 3 angesehenen Inventare nebeneinander. */
 public class HistoryScreen extends Screen {
 
-    private static final int SLOT = 18, COLS = 9, GAP = 14;
+    private static final int SLOT = 18, COLS = 9, GAP = 14, LIST_W = 120, LIST_GAP = 6;
 
     private boolean wasDown;
 
@@ -55,20 +55,25 @@ public class HistoryScreen extends Screen {
         }
 
         int panelW = COLS * SLOT;
-        int n = Math.max(1, Math.min(list.size(), (width - 20 + GAP) / (panelW + GAP)));
-        int totalW = n * panelW + (n - 1) * GAP;
+        int blockW = LIST_W + LIST_GAP + panelW;   // Liste links + Inventar
+        int n = Math.max(1, Math.min(list.size(), (width - 20 + GAP) / (blockW + GAP)));
+        int totalW = n * blockW + (n - 1) * GAP;
         int x0 = (width - totalW) / 2;
         ItemStack hovered = null;
 
         for (int i = 0; i < n; i++) {
             InvTrackerClient.Entry e = list.get(i);
-            int x = x0 + i * (panelW + GAP);
+            int bx = x0 + i * (blockW + GAP);
+            int x = bx + LIST_W + LIST_GAP;           // Inventar-Raster
             int y = 28;
 
             ctx.drawText(textRenderer, e.name, x, y, 0xFFFFFF55, true);
             ctx.drawText(textRenderer, ago(e.time), x, y + 10, 0xFFAAAAAA, true);
 
             int gy = y + 26;
+            // links neben dem Inventar: wie viel von jeder Sache
+            InvTrackerClient.drawCounts(ctx, textRenderer, bx, gy + 8, e.stacks, LIST_W,
+                    Math.max(3, (height - gy - 30) / 16));
             int rows = (e.stacks.size() + COLS - 1) / COLS;
             ctx.fill(x - 1, gy - 1, x + panelW + 1, gy + rows * SLOT + 1, 0x66000000);
 
