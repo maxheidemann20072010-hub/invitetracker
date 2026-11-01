@@ -59,8 +59,6 @@ public class HistoryScreen extends Screen {
                 }
                 if (mx >= sx && mx < sx + 16 && my >= sy && my < sy + 16) hovered = st;
             }
-
-            InvTrackerClient.drawSummary(ctx, textRenderer, x, gy + rows * SLOT + 12, e.prev, e.cur, panelW, 8);
         }
 
         if (hovered != null) ctx.drawItemTooltip(textRenderer, hovered, mx, my);
