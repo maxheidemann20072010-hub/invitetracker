@@ -3,9 +3,14 @@
   "id": "invtracker",
   "version": "${version}",
   "name": "Inv Tracker",
-  "description": "Zeigt beim /invsee, was sich seit dem letzten Mal im Inventar geaendert hat.",
+  "description": "Zeigt die letzten 3 /invsee-Inventare und kann Single-/Double-/Triple-Tap per Taste.",
   "environment": "client",
-  "entrypoints": { "client": ["de.invtracker.InvTrackerClient"] },
+  "entrypoints": {
+    "client": [
+      "de.invtracker.InvTrackerClient",
+      "de.tapmod.TapModClient"
+    ]
+  },
   "depends": {
     "fabricloader": ">=0.18.0",
     "minecraft": "~1.21.11",

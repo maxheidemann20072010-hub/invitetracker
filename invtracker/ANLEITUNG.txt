@@ -1,4 +1,5 @@
-U = /invsee auf den Spieler im Fadenkreuz (sonst der zuletzt benutzte).
-J = die letzten 3 angesehenen Inventare nebeneinander.
-J nochmal druecken, waehrend das Fenster offen ist = alle 3 werden automatisch neu eingelesen.
-Tasten aendern: Optionen -> Steuerung -> Tastenbelegung -> Inv Tracker.
+Eine Mod, zwei Dinge:
+- U = /invsee auf Spieler im Fadenkreuz, J = letzte 3 Inventare (J nochmal = aktualisieren)
+- V = Single-Tap, B = Double-Tap, N = Triple-Tap, M = Tap-Einstellungen
+Obsidian und Kristalle muessen in der Hotbar liegen. Tasten aendern:
+Optionen -> Steuerung -> Tastenbelegung.
