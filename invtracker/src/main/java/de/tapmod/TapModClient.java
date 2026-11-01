@@ -33,9 +33,10 @@ import java.util.List;
 public class TapModClient implements ClientModInitializer {
 
     public static class Config {
-        public String single = "OC";
-        public String dbl = "OCHC";
-        public String triple = "OCHOCHC";
+        public int version = 2;
+        public String single = "C";
+        public String dbl = "CC";
+        public String triple = "CCC";
         public int delay = 2; // Ticks zwischen zwei Schritten (20 Ticks = 1 Sekunde)
     }
 
@@ -143,6 +144,16 @@ public class TapModClient implements ClientModInitializer {
                 mc.player.swingHand(Hand.MAIN_HAND);
             }
             case 'C' -> {
+                // Steht schon ein Kristall da (z. B. der vorige), warten bis er weg ist (bis ca. 1 Sekunde)
+                List<EndCrystalEntity> there = mc.world.getEntitiesByClass(
+                        EndCrystalEntity.class, new Box(obbyPos.up()), e -> true);
+                if (!there.isEmpty() && retries < 20) {
+                    retries++;
+                    idx--;
+                    wait = 0;
+                    return;
+                }
+                retries = 0;
                 if (!select(mc, Items.END_CRYSTAL, "Kristall")) return;
                 mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND,
                         new BlockHitResult(Vec3d.ofCenter(obbyPos).add(0, 0.5, 0), Direction.UP, obbyPos, false));
@@ -179,7 +190,8 @@ public class TapModClient implements ClientModInitializer {
         try {
             if (Files.exists(CFG)) {
                 Config c = GSON.fromJson(Files.readString(CFG), Config.class);
-                if (c != null) cfg = c;
+                // Alte Einstellungen (mit Obsidian) werden auf die neuen Standardwerte zurückgesetzt
+                if (c != null && c.version >= 2) cfg = c;
             }
         } catch (Exception ignored) {}
     }
