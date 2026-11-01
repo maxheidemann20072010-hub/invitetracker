@@ -29,7 +29,7 @@ public class InvTrackerClient implements ClientModInitializer {
     private static final int HISTORY_SIZE = 3;
 
     /** Letzter gesehener Stand pro Spieler: Name (klein) -> (Item-ID -> Anzahl). */
-    private static final Map<String, Map<String, Integer>> snapshots = new HashMap<>();
+    private static final Map<String, Map<String, List<Integer>>> snapshots = new HashMap<>();
     private static String pendingTarget;
     private static String lastName;
     private static KeyBinding invseeKey, historyKey;
@@ -38,14 +38,14 @@ public class InvTrackerClient implements ClientModInitializer {
     public static class Entry {
         public String name;
         public List<ItemStack> stacks = new ArrayList<>();
-        public Map<String, Integer> prev; // Stand beim vorigen Mal (null = erster Scan)
-        public Map<String, Integer> cur = new HashMap<>();
+        public Map<String, List<Integer>> prev; // Stand beim vorigen Mal (null = erster Scan)
+        public Map<String, List<Integer>> cur = new HashMap<>();
         public long time;
     }
 
     private static class State {
-        Map<String, Integer> prev;
-        Map<String, Integer> cur = new HashMap<>();
+        Map<String, List<Integer>> prev;
+        Map<String, List<Integer>> cur = new HashMap<>();
         List<ItemStack> stacks = new ArrayList<>();
         int ticks;
     }
@@ -131,34 +131,60 @@ public class InvTrackerClient implements ClientModInitializer {
         mc.player.networkHandler.sendChatCommand("invsee " + name);
     }
 
-    private static Map<String, Integer> count(Inventory inv) {
-        Map<String, Integer> m = new HashMap<>();
+    /** Pro Item die Größen aller Stacks (in Slot-Reihenfolge). */
+    private static Map<String, List<Integer>> count(Inventory inv) {
+        Map<String, List<Integer>> m = new HashMap<>();
         for (int i = 0; i < inv.size(); i++) {
             ItemStack s = inv.getStack(i);
             if (s.isEmpty()) continue;
-            m.merge(Registries.ITEM.getId(s.getItem()).toString(), s.getCount(), Integer::sum);
+            m.computeIfAbsent(Registries.ITEM.getId(s.getItem()).toString(), k -> new ArrayList<>())
+                    .add(s.getCount());
         }
         return m;
     }
 
+    private static class Loss {
+        final String id;
+        final int before, after;
+        Loss(String id, int before, int after) {
+            this.id = id;
+            this.before = before;
+            this.after = after;
+        }
+    }
+
     /**
-     * Zeigt nur, was seit dem vorigen Scan weniger geworden ist, z. B. "-1 Totem des Untodes".
-     * Die größten Verluste stehen oben. Gibt das neue y zurück.
+     * Zeigt pro Stack, was seit dem vorigen Scan weniger geworden ist,
+     * z. B. "-1 Goldener Apfel (Stack 1: 64 → 63)". Größte Verluste zuerst. Gibt das neue y zurück.
      */
     public static int drawSummary(DrawContext ctx, TextRenderer tr, int x, int y,
-                                  Map<String, Integer> prev, Map<String, Integer> cur,
+                                  Map<String, List<Integer>> prev, Map<String, List<Integer>> cur,
                                   int maxW, int maxLines) {
         if (prev == null) {
             ctx.drawText(tr, "Erster Scan gespeichert", x, y, 0xFFAAAAAA, true);
             return y + 16;
         }
 
-        Map<String, Integer> lost = new HashMap<>();
-        for (Map.Entry<String, Integer> e : prev.entrySet()) {
-            int diff = cur.getOrDefault(e.getKey(), 0) - e.getValue();
-            if (diff < 0) lost.put(e.getKey(), diff);
+        List<Loss> losses = new ArrayList<>();
+        for (Map.Entry<String, List<Integer>> e : prev.entrySet()) {
+            List<Integer> p = new ArrayList<>(e.getValue());
+            List<Integer> c = new ArrayList<>(cur.getOrDefault(e.getKey(), new ArrayList<>()));
+            // Stacks, die gleich geblieben sind (auch wenn sie den Slot gewechselt haben), wegstreichen
+            Iterator<Integer> it = p.iterator();
+            while (it.hasNext()) {
+                Integer v = it.next();
+                if (c.remove(v)) it.remove();
+            }
+            p.sort(Comparator.reverseOrder());
+            c.sort(Comparator.reverseOrder());
+            for (int i = 0; i < p.size(); i++) {
+                int before = p.get(i);
+                int after = i < c.size() ? c.get(i) : 0;
+                if (after < before) losses.add(new Loss(e.getKey(), before, after));
+            }
         }
-        if (lost.isEmpty()) {
+
+        if (losses.isEmpty()) {
             ctx.drawText(tr, "Nichts verbraucht", x, y, 0xFF55FF55, true);
             return y + 16;
         }
@@ -166,18 +192,20 @@ public class InvTrackerClient implements ClientModInitializer {
         ctx.drawText(tr, "Verbraucht seit dem letzten Mal:", x, y, 0xFFAAAAAA, true);
         y += 16;
 
-        List<String> ids = new ArrayList<>(lost.keySet());
-        ids.sort(Comparator.comparingInt(lost::get));
+        losses.sort(Comparator.comparingInt(l -> l.after - l.before));
+        Map<String, Integer> stackNo = new HashMap<>();
 
         int shown = 0;
-        for (String id : ids) {
+        for (Loss l : losses) {
             if (shown >= maxLines) {
-                ctx.drawText(tr, "… +" + (ids.size() - shown) + " weitere", x, y, 0xFFAAAAAA, true);
+                ctx.drawText(tr, "… +" + (losses.size() - shown) + " weitere", x, y, 0xFFAAAAAA, true);
                 y += 12;
                 break;
             }
-            Item item = Registries.ITEM.get(Identifier.of(id));
-            String text = lost.get(id) + " " + item.getName().getString();
+            int n = stackNo.merge(l.id, 1, Integer::sum);
+            Item item = Registries.ITEM.get(Identifier.of(l.id));
+            String text = (l.after - l.before) + " " + item.getName().getString()
+                    + " (Stack " + n + ": " + l.before + " → " + l.after + ")";
             ctx.drawItem(new ItemStack(item), x, y - 4);
             ctx.drawText(tr, tr.trimToWidth(text, maxW - 20), x + 20, y, 0xFFFF5555, true);
             y += 16;
