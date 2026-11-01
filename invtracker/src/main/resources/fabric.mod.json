@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "invtracker",
+  "version": "${version}",
+  "name": "Inv Tracker",
+  "description": "Zeigt beim /invsee, was sich seit dem letzten Mal im Inventar geaendert hat.",
+  "environment": "client",
+  "entrypoints": { "client": ["de.invtracker.InvTrackerClient"] },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.4",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

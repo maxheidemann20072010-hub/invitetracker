@@ -1,0 +1,8 @@
+1. Auf github.com einloggen und ein neues Repository erstellen (Name egal).
+2. "uploading an existing file" klicken und ALLE Dateien/Ordner aus dem
+   Zip hochladen (wichtig: auch den versteckten Ordner .github).
+3. Oben auf "Actions" klicken, warten bis der Haken gruen ist (ca. 3-5 Min).
+4. Den Lauf anklicken, unten bei "Artifacts" -> invtracker-jar herunterladen.
+5. Zip entpacken, die invtracker-1.0.0.jar in den mods-Ordner legen.
+   Voraussetzung: Fabric Loader + Fabric API fuer Minecraft 1.21.4.
+Taste K = Item-Auswahl.
