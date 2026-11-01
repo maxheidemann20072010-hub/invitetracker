@@ -1,4 +1,3 @@
-Beim Oeffnen: links steht, was der Spieler alles dabei hat (z. B. 36 Enderperle),
-rechts der Verbrauch seit dem letzten Oeffnen dieses Spielers. Bei jedem Oeffnen wird
-der Stand aktualisiert und beim naechsten Mal als Vergleich benutzt.
-K = Items auswaehlen, U = /invsee auf Spieler im Fadenkreuz, J = letzte 3 Inventare.
+K = Items auswaehlen (oben immer mit Vorher -> Nachher), U = /invsee auf Spieler im Fadenkreuz,
+J = letzte 3 Inventare gleichzeitig. Alles andere, was weniger wurde, steht automatisch
+darunter als Minus pro Stack. Tasten aendern: Optionen -> Steuerung -> Tastenbelegung -> Inv Tracker.

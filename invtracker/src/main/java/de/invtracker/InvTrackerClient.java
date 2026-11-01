@@ -108,23 +108,12 @@ public class InvTrackerClient implements ClientModInitializer {
 
             ScreenEvents.afterRender(screen).register((s, ctx, mx, my, delta) -> {
                 if (st.ticks < 3) return;
-                TextRenderer tr = mc.textRenderer;
-                int side = Math.max(100, (s.width - 176) / 2 - 12);
-                int lx = 6;
-                int rx = (s.width + 176) / 2 + 8;
-
-                // Links: was der Spieler alles dabei hat
-                ctx.drawText(tr, "Inhalt: " + target, lx, 30, 0xFFFFFF55, true);
-                drawContents(ctx, tr, lx, 46, st.cur, side, Math.max(3, (s.height - 70) / 16));
-
-                // Rechts: Verbrauch seit dem letzten Mal
-                ctx.drawText(tr, "Verbrauch: " + target, rx, 30, 0xFFFFFF55, true);
-                drawSummary(ctx, tr, rx, 46, st.prev, st.cur, side, 12);
+                ctx.drawText(mc.textRenderer, "Inv-Tracker: " + target, 4, 30, 0xFFFFFF55, true);
+                drawSummary(ctx, mc.textRenderer, 4, 46, st.prev, st.cur, 230, 12);
             });
 
             ScreenEvents.remove(screen).register(s -> {
                 if (st.ticks < 3) return;
-                // Jedes Mal: neuen Stand merken, damit das nächste Öffnen damit vergleicht.
                 snapshots.put(key, st.cur);
                 Entry e = new Entry();
                 e.name = target;
@@ -167,34 +156,6 @@ public class InvTrackerClient implements ClientModInitializer {
                     .add(s.getCount());
         }
         return m;
-    }
-
-    /** Zählt auf, was der Spieler alles dabei hat, z. B. "36 Enderperle" (größte Menge zuerst). */
-    private static void drawContents(DrawContext ctx, TextRenderer tr, int x, int y,
-                                     Map<String, List<Integer>> cur, int maxW, int maxLines) {
-        if (cur.isEmpty()) {
-            ctx.drawText(tr, "Leer", x, y, 0xFFAAAAAA, true);
-            return;
-        }
-        List<Map.Entry<String, Integer>> list = new ArrayList<>();
-        for (Map.Entry<String, List<Integer>> e : cur.entrySet()) {
-            list.add(Map.entry(e.getKey(), sum(e.getValue())));
-        }
-        list.sort((a, b) -> b.getValue() - a.getValue());
-
-        int shown = 0;
-        for (Map.Entry<String, Integer> e : list) {
-            if (shown >= maxLines) {
-                ctx.drawText(tr, "… +" + (list.size() - shown) + " weitere", x, y, 0xFFAAAAAA, true);
-                break;
-            }
-            Item item = Registries.ITEM.get(Identifier.of(e.getKey()));
-            ctx.drawItem(new ItemStack(item), x, y - 4);
-            ctx.drawText(tr, tr.trimToWidth(e.getValue() + " " + item.getName().getString(), maxW - 20),
-                    x + 20, y, 0xFFFFFFFF, true);
-            y += 16;
-            shown++;
-        }
     }
 
     private static class Loss {
