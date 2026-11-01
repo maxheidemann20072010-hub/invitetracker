@@ -1,10 +1,13 @@
 package de.invtracker;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -20,6 +23,8 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.EntityHitResult;
 import org.lwjgl.glfw.GLFW;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 public class InvTrackerClient implements ClientModInitializer {
@@ -32,7 +37,11 @@ public class InvTrackerClient implements ClientModInitializer {
     private static final Map<String, Map<String, List<Integer>>> snapshots = new HashMap<>();
     private static String pendingTarget;
     private static String lastName;
-    private static KeyBinding invseeKey, historyKey;
+    /** Items, die oben immer mit Vorher/Nachher angezeigt werden (Auswahl mit Taste K). */
+    public static final Set<String> tracked = new LinkedHashSet<>();
+    private static KeyBinding openKey, invseeKey, historyKey;
+    private static final Path CFG = FabricLoader.getInstance().getConfigDir().resolve("invtracker.json");
+    private static final Gson GSON = new Gson();
 
     /** Ein gemerktes Inventar. */
     public static class Entry {
@@ -52,13 +61,19 @@ public class InvTrackerClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        loadConfig();
+        if (tracked.isEmpty()) tracked.add("minecraft:totem_of_undying");
+
         KeyBinding.Category cat = KeyBinding.Category.create(Identifier.of("invtracker", "main"));
+        openKey = KeyBindingHelper.registerKeyBinding(
+                new KeyBinding("key.invtracker.open", GLFW.GLFW_KEY_K, cat));
         invseeKey = KeyBindingHelper.registerKeyBinding(
                 new KeyBinding("key.invtracker.invsee", GLFW.GLFW_KEY_U, cat));
         historyKey = KeyBindingHelper.registerKeyBinding(
                 new KeyBinding("key.invtracker.history", GLFW.GLFW_KEY_J, cat));
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+            while (openKey.wasPressed()) mc.setScreen(new TrackerScreen());
             while (historyKey.wasPressed()) mc.setScreen(new HistoryScreen());
             while (invseeKey.wasPressed()) invseeAimed(mc);
         });
@@ -162,11 +177,35 @@ public class InvTrackerClient implements ClientModInitializer {
                                   int maxW, int maxLines) {
         if (prev == null) {
             ctx.drawText(tr, "Erster Scan gespeichert", x, y, 0xFFAAAAAA, true);
-            return y + 16;
+            y += 16;
         }
+
+        // Ausgewählte Items: immer mit Vorher -> Nachher
+        for (String id : tracked) {
+            Item item = Registries.ITEM.get(Identifier.of(id));
+            String name = item.getName().getString();
+            int now = sum(cur.get(id));
+            String text;
+            int color = 0xFFFFFFFF;
+            if (prev == null) {
+                text = name + ": " + now;
+            } else {
+                int before = sum(prev.get(id));
+                int diff = now - before;
+                text = name + ": " + before + " → " + now
+                        + (diff != 0 ? " (" + (diff > 0 ? "+" : "") + diff + ")" : "");
+                if (diff < 0) color = 0xFFFF5555;
+                else if (diff > 0) color = 0xFF55FF55;
+            }
+            ctx.drawItem(new ItemStack(item), x, y - 4);
+            ctx.drawText(tr, tr.trimToWidth(text, maxW - 20), x + 20, y, color, true);
+            y += 18;
+        }
+        if (prev == null) return y + 4;
 
         List<Loss> losses = new ArrayList<>();
         for (Map.Entry<String, List<Integer>> e : prev.entrySet()) {
+            if (tracked.contains(e.getKey())) continue;
             List<Integer> p = new ArrayList<>(e.getValue());
             List<Integer> c = new ArrayList<>(cur.getOrDefault(e.getKey(), new ArrayList<>()));
             // Stacks, die gleich geblieben sind (auch wenn sie den Slot gewechselt haben), wegstreichen
@@ -185,7 +224,7 @@ public class InvTrackerClient implements ClientModInitializer {
         }
 
         if (losses.isEmpty()) {
-            ctx.drawText(tr, "Nichts verbraucht", x, y, 0xFF55FF55, true);
+            ctx.drawText(tr, tracked.isEmpty() ? "Nichts verbraucht" : "Sonst nichts verbraucht", x, y, 0xFF55FF55, true);
             return y + 16;
         }
 
@@ -212,5 +251,28 @@ public class InvTrackerClient implements ClientModInitializer {
             shown++;
         }
         return y + 4;
+    }
+
+    private static int sum(List<Integer> l) {
+        if (l == null) return 0;
+        int t = 0;
+        for (int v : l) t += v;
+        return t;
+    }
+
+    // ---- Config ----
+    public static void saveConfig() {
+        try {
+            Files.writeString(CFG, GSON.toJson(new ArrayList<>(tracked)));
+        } catch (Exception ignored) {}
+    }
+
+    private static void loadConfig() {
+        try {
+            if (Files.exists(CFG)) {
+                List<String> l = GSON.fromJson(Files.readString(CFG), new TypeToken<List<String>>() {}.getType());
+                if (l != null) tracked.addAll(l);
+            }
+        } catch (Exception ignored) {}
     }
 }

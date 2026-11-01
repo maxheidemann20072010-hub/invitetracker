@@ -1,5 +1,3 @@
-U = /invsee auf den Spieler im Fadenkreuz, J = letzte 3 Inventare gleichzeitig.
-Die Mod zeigt automatisch, was seit dem vorigen Scan weniger geworden ist (z. B. -1 Totem).
-Tasten aendern: Optionen -> Steuerung -> Tastenbelegung -> Inv Tracker.
-Update: den ganzen Ordner "invtracker" auf GitHub in "Upload files" ziehen, Commit changes,
-unter Actions auf den gruenen Haken warten, invtracker-jar laden, alte jar aus mods loeschen.
+K = Items auswaehlen (oben immer mit Vorher -> Nachher), U = /invsee auf Spieler im Fadenkreuz,
+J = letzte 3 Inventare gleichzeitig. Alles andere, was weniger wurde, steht automatisch
+darunter als Minus pro Stack. Tasten aendern: Optionen -> Steuerung -> Tastenbelegung -> Inv Tracker.
