@@ -1,7 +1,5 @@
 {
   "key.invtracker.invsee": "InvSee auf Spieler im Fadenkreuz",
   "key.invtracker.history": "Letzte 3 Inventare gleichzeitig",
-  "key.category.invtracker.main": "Inv Tracker",
-  "key.category.tapmod.main": "Tap Mod",
-  "key.tapmod.menu": "Tap-Menü öffnen"
+  "key.category.invtracker.main": "Inv Tracker"
 }

@@ -1,7 +1,5 @@
 {
   "key.invtracker.invsee": "InvSee player you look at",
   "key.invtracker.history": "Show last 3 inventories at once",
-  "key.category.invtracker.main": "Inv Tracker",
-  "key.category.tapmod.main": "Tap Mod",
-  "key.tapmod.menu": "Open tap menu"
+  "key.category.invtracker.main": "Inv Tracker"
 }
