@@ -26,9 +26,9 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Führt bei Tastendruck eine Reihenfolge aus:
- *   O = Obsidian setzen, C = Kristall setzen, H = Kristall schlagen, W = kurze Pause.
- * Es wird immer dort gesetzt/geschlagen, wo dein Fadenkreuz beim Tastendruck hinzeigt.
+ * Eine Taste öffnet das Tap-Menü. Dort wählst du Single-, Double- oder Triple-Tap.
+ * Buchstaben: O = Obsidian setzen, C = Kristall setzen, H = Kristall schlagen, W = kurze Pause.
+ * Es wird dort gesetzt/geschlagen, wo dein Fadenkreuz beim Öffnen des Menüs hingezeigt hat.
  */
 public class TapModClient implements ClientModInitializer {
 
@@ -43,7 +43,7 @@ public class TapModClient implements ClientModInitializer {
     private static final Path CFG = FabricLoader.getInstance().getConfigDir().resolve("tapmod.json");
     private static final Gson GSON = new Gson();
 
-    private static KeyBinding singleKey, doubleKey, tripleKey, settingsKey;
+    public static KeyBinding menuKey;
 
     // Zustand der laufenden Reihenfolge
     private static String queue = "";
@@ -55,29 +55,29 @@ public class TapModClient implements ClientModInitializer {
     public void onInitializeClient() {
         loadConfig();
         KeyBinding.Category cat = KeyBinding.Category.create(Identifier.of("tapmod", "main"));
-        singleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.tapmod.single", GLFW.GLFW_KEY_V, cat));
-        doubleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.tapmod.double", GLFW.GLFW_KEY_B, cat));
-        tripleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.tapmod.triple", GLFW.GLFW_KEY_N, cat));
-        settingsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.tapmod.settings", GLFW.GLFW_KEY_M, cat));
+        menuKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.tapmod.menu", GLFW.GLFW_KEY_V, cat));
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-            while (settingsKey.wasPressed()) mc.setScreen(new TapSettingsScreen());
-
             if (mc.player == null || mc.world == null || mc.interactionManager == null) {
                 queue = "";
                 return;
             }
             if (!queue.isEmpty()) step(mc);
 
-            while (singleKey.wasPressed()) start(mc, cfg.single);
-            while (doubleKey.wasPressed()) start(mc, cfg.dbl);
-            while (tripleKey.wasPressed()) start(mc, cfg.triple);
+            while (menuKey.wasPressed()) {
+                if (mc.currentScreen == null && queue.isEmpty()) {
+                    BlockHitResult hit = null;
+                    if (mc.crosshairTarget instanceof BlockHitResult h && h.getType() == HitResult.Type.BLOCK) hit = h;
+                    mc.setScreen(new TapMenuScreen(hit));
+                }
+            }
         });
     }
 
-    private static void start(MinecraftClient mc, String seq) {
-        if (!queue.isEmpty() || mc.currentScreen != null || seq.isEmpty()) return;
-        if (!(mc.crosshairTarget instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
+    /** Startet eine Reihenfolge auf dem Block, auf den beim Öffnen des Menüs gezeigt wurde. */
+    public static void start(MinecraftClient mc, String seq, BlockHitResult hit) {
+        if (mc.player == null || !queue.isEmpty() || seq.isEmpty()) return;
+        if (hit == null) {
             mc.player.sendMessage(Text.literal("Tap Mod: Schau auf einen Block"), true);
             return;
         }
@@ -130,15 +130,12 @@ public class TapModClient implements ClientModInitializer {
             case 'O' -> {
                 if (!select(mc, Items.OBSIDIAN, "Obsidian")) return;
                 if (idx == 1) {
-                    // erstes Obsidian: dort, wo du hingeschaut hast
                     mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND, firstHit);
                 } else if (mc.world.getBlockState(obbyPos).isAir()) {
-                    // Platz ist leer: auf den Block darunter setzen
                     BlockPos below = obbyPos.down();
                     mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND,
                             new BlockHitResult(Vec3d.ofCenter(below).add(0, 0.5, 0), Direction.UP, below, false));
                 } else {
-                    // Obsidian steht schon: das neue kommt obendrauf
                     mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND,
                             new BlockHitResult(Vec3d.ofCenter(obbyPos).add(0, 0.5, 0), Direction.UP, obbyPos, false));
                     obbyPos = obbyPos.up();
@@ -155,7 +152,6 @@ public class TapModClient implements ClientModInitializer {
                 List<EndCrystalEntity> list = mc.world.getEntitiesByClass(
                         EndCrystalEntity.class, new Box(obbyPos.up()), e -> true);
                 if (list.isEmpty()) {
-                    // Kristall ist evtl. noch nicht da (Ping): ein paar Mal nochmal versuchen
                     if (retries < 5) {
                         retries++;
                         idx--;

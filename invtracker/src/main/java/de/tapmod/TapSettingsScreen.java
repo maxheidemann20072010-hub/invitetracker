@@ -9,10 +9,12 @@ import net.minecraft.text.Text;
 /** Einstellungsfenster (Taste M): Reihenfolgen und Tempo ändern. */
 public class TapSettingsScreen extends Screen {
 
+    private final Screen parent;
     private TextFieldWidget single, dbl, triple, delay;
 
-    public TapSettingsScreen() {
+    public TapSettingsScreen(Screen parent) {
         super(Text.literal("Tap Mod: Einstellungen"));
+        this.parent = parent;
     }
 
     private TextFieldWidget field(int y, String value, int maxLen) {
@@ -39,7 +41,7 @@ public class TapSettingsScreen extends Screen {
             delay.setText(String.valueOf(d.delay));
         }).dimensions(width / 2 - 100, 195, 98, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Fertig"), b -> close())
+        addDrawableChild(ButtonWidget.builder(Text.literal("Fertig"), b -> net.minecraft.client.MinecraftClient.getInstance().setScreen(parent))
                 .dimensions(width / 2 + 2, 195, 98, 20).build());
     }
 
@@ -51,9 +53,9 @@ public class TapSettingsScreen extends Screen {
         ctx.drawCenteredTextWithShadow(textRenderer,
                 "O = Obsidian setzen   C = Kristall setzen   H = Kristall schlagen   W = Pause",
                 width / 2, 30, 0xFFAAAAAA);
-        ctx.drawText(textRenderer, "Single-Tap (Taste V)", x, 49, 0xFFFFFF55, true);
-        ctx.drawText(textRenderer, "Double-Tap (Taste B)", x, 84, 0xFFFFFF55, true);
-        ctx.drawText(textRenderer, "Triple-Tap (Taste N)", x, 119, 0xFFFFFF55, true);
+        ctx.drawText(textRenderer, "Single-Tap", x, 49, 0xFFFFFF55, true);
+        ctx.drawText(textRenderer, "Double-Tap", x, 84, 0xFFFFFF55, true);
+        ctx.drawText(textRenderer, "Triple-Tap", x, 119, 0xFFFFFF55, true);
         ctx.drawText(textRenderer, "Tempo: Ticks zwischen den Schritten (1 = schnell)", x, 154, 0xFFFFFF55, true);
     }
 

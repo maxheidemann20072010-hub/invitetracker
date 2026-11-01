@@ -2,9 +2,6 @@
   "key.invtracker.invsee": "InvSee player you look at",
   "key.invtracker.history": "Show last 3 inventories at once",
   "key.category.invtracker.main": "Inv Tracker",
-  "key.tapmod.single": "Single tap",
-  "key.tapmod.double": "Double tap",
-  "key.tapmod.triple": "Triple tap",
-  "key.tapmod.settings": "Open tap settings",
-  "key.category.tapmod.main": "Tap Mod"
+  "key.category.tapmod.main": "Tap Mod",
+  "key.tapmod.menu": "Open tap menu"
 }

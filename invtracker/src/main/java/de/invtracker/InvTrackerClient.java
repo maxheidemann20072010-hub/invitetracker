@@ -26,7 +26,7 @@ public class InvTrackerClient implements ClientModInitializer {
 
     private static String pendingTarget;
     private static String lastName;
-    private static KeyBinding invseeKey;
+    public static KeyBinding invseeKey;
     public static KeyBinding historyKey;
 
     // Aktualisieren aller gemerkten Inventare (Taste im J-Fenster nochmal drücken)

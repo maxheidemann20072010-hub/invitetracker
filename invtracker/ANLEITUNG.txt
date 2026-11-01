@@ -1,5 +1,5 @@
 Eine Mod, zwei Dinge:
 - U = /invsee auf Spieler im Fadenkreuz, J = letzte 3 Inventare (J nochmal = aktualisieren)
-- V = Single-Tap, B = Double-Tap, N = Triple-Tap, M = Tap-Einstellungen
-Obsidian und Kristalle muessen in der Hotbar liegen. Tasten aendern:
-Optionen -> Steuerung -> Tastenbelegung.
+- V = Tap-Menue: dort Single-, Double- oder Triple-Tap anklicken, Einstellungen, Tasten aendern
+Schau vor dem Oeffnen des Menues auf den Block. Obsidian und Kristalle muessen in der Hotbar liegen.
+Alle Tasten der Mod aenderst du im Tap-Menue unter "Tasten aendern" (oder in den Minecraft-Einstellungen).
