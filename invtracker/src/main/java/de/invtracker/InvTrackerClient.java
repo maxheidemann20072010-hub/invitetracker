@@ -34,6 +34,7 @@ public class InvTrackerClient implements ClientModInitializer {
     private static final int HISTORY_SIZE = 3;
 
     private static String pendingTarget;
+    private static long pendingTime;
     private static String lastName;
     /** Sachen, deren Menge links angezeigt wird (leer = alles anzeigen). */
     public static final Set<String> tracked = new LinkedHashSet<>();
@@ -90,6 +91,7 @@ public class InvTrackerClient implements ClientModInitializer {
             String[] p = cmd.trim().split("\\s+");
             if (p.length >= 2 && p[0].toLowerCase().matches("invsee|invs|inv|openinv|oi")) {
                 pendingTarget = p[1];
+                pendingTime = System.currentTimeMillis();
                 lastName = p[1];
             }
         });
@@ -97,7 +99,12 @@ public class InvTrackerClient implements ClientModInitializer {
         ScreenEvents.AFTER_INIT.register((mc, screen, w, h) -> {
             if (!(screen instanceof GenericContainerScreen gs)) return;
 
-            String target = pendingTarget != null ? pendingTarget : screen.getTitle().getString();
+            // Nur Fenster, die durch /invsee geöffnet wurden (Kisten, Auktion, Orders usw. werden ignoriert)
+            if (pendingTarget == null || System.currentTimeMillis() - pendingTime > 4000) {
+                pendingTarget = null;
+                return;
+            }
+            String target = pendingTarget;
             pendingTarget = null;
 
             State st = new State();
@@ -153,6 +160,7 @@ public class InvTrackerClient implements ClientModInitializer {
     private static void sendInvsee(MinecraftClient mc, String name) {
         lastName = name;
         pendingTarget = name;
+        pendingTime = System.currentTimeMillis();
         mc.player.networkHandler.sendChatCommand("invsee " + name);
     }
 
