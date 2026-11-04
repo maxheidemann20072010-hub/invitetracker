@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "invtracker",
+  "version": "${version}",
+  "name": "Inv Tracker",
+  "description": "Zeigt die letzten 3 /invsee-Inventare nebeneinander und aktualisiert sie per Tastendruck.",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "de.invtracker.InvTrackerClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
