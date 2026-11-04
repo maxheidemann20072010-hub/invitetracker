@@ -9,6 +9,9 @@ import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
+import net.minecraft.screen.GenericContainerScreenHandler;
+import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
@@ -120,10 +123,10 @@ public class InvTrackerClient implements ClientModInitializer {
 
             // Links neben dem Inventar: wie viel von jeder Sache der Spieler hat
             ScreenEvents.afterRender(screen).register((s, ctx, mx, my, delta) -> {
-                if (refreshing) { // beim Aktualisieren das Inventar nicht zeigen
-                    ctx.fill(0, 0, s.width, s.height, 0xFF0D0D12);
-                    ctx.drawCenteredTextWithShadow(mc.textRenderer, "Aktualisiere Inventare …",
-                            s.width / 2, s.height / 2, 0xFFFFFFFF);
+                if (refreshing) { // beim Aktualisieren statt des Inventars die 3 Inventare zeigen
+                    ctx.fill(0, 0, s.width, s.height, 0xFF202028);
+                    HistoryScreen.drawView(ctx, mc.textRenderer, s.width, s.height, -1, -1,
+                            "Aktualisiere …");
                     return;
                 }
                 if (st.ticks < 3) return;
@@ -170,6 +173,32 @@ public class InvTrackerClient implements ClientModInitializer {
         mc.player.networkHandler.sendChatCommand("invsee " + name);
     }
 
+    // Leise geöffnetes Inventar (ohne Fenster), siehe ClientPlayNetworkHandlerMixin
+    private static GenericContainerScreenHandler silentHandler;
+    private static int silentTicks;
+
+    public static boolean isRefreshing() {
+        return refreshing;
+    }
+
+    /**
+     * Wird vom Mixin aufgerufen, wenn der Server ein Inventar öffnet. Beim Aktualisieren wird es leise
+     * (ohne Fenster) geöffnet. Gibt true zurück, wenn das normale Öffnen übersprungen werden soll.
+     */
+    public static boolean silentOpen(int syncId, ScreenHandlerType<?> type) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (!refreshing || refreshCurrent == null || silentHandler != null || mc.player == null) return false;
+        if (type != ScreenHandlerType.GENERIC_9X1 && type != ScreenHandlerType.GENERIC_9X2
+                && type != ScreenHandlerType.GENERIC_9X3 && type != ScreenHandlerType.GENERIC_9X4
+                && type != ScreenHandlerType.GENERIC_9X5 && type != ScreenHandlerType.GENERIC_9X6) return false;
+        if (!(type.create(syncId, mc.player.getInventory()) instanceof GenericContainerScreenHandler h)) return false;
+        mc.player.currentScreenHandler = h;
+        silentHandler = h;
+        silentTicks = 0;
+        pendingTarget = null;
+        return true;
+    }
+
     /** Wird aus dem J-Fenster aufgerufen: alle gemerkten Inventare der Reihe nach neu einlesen. */
     public static void startRefresh(MinecraftClient mc) {
         if (refreshing || mc.player == null || history.isEmpty()) return;
@@ -179,14 +208,14 @@ public class InvTrackerClient implements ClientModInitializer {
         while (it.hasNext()) refreshQueue.add(it.next().name);
         refreshing = true;
         refreshCurrent = null;
-        mc.setScreen(null);
-        mc.player.sendMessage(Text.literal("Inv-Tracker: aktualisiere Inventare …"), true);
+        silentHandler = null;
     }
 
     private static void refreshTick(MinecraftClient mc) {
         if (mc.player == null) {
             refreshing = false;
             refreshQueue.clear();
+            silentHandler = null;
             return;
         }
         if (refreshCurrent == null) {
@@ -194,7 +223,40 @@ public class InvTrackerClient implements ClientModInitializer {
             return;
         }
         refreshTicks++;
+
+        if (silentHandler != null) {
+            // Leise geöffnet: Inhalt abwarten, übernehmen, ohne Fenster wieder schließen
+            silentTicks++;
+            Inventory inv = silentHandler.getInventory();
+            boolean loaded = false;
+            for (int i = 0; i < inv.size(); i++) {
+                if (!inv.getStack(i).isEmpty()) {
+                    loaded = true;
+                    break;
+                }
+            }
+            if ((loaded && silentTicks >= 2) || silentTicks >= 6) {
+                Entry e = new Entry();
+                e.name = refreshCurrent;
+                for (int i = 0; i < inv.size(); i++) e.stacks.add(inv.getStack(i).copy());
+                e.time = System.currentTimeMillis();
+                history.removeIf(o -> o.name.equalsIgnoreCase(e.name));
+                history.addFirst(e);
+                while (history.size() > HISTORY_SIZE) history.removeLast();
+
+                int syncId = silentHandler.syncId;
+                silentHandler = null;
+                if (mc.getNetworkHandler() != null) {
+                    mc.getNetworkHandler().sendPacket(new CloseHandledScreenC2SPacket(syncId));
+                }
+                mc.player.currentScreenHandler = mc.player.playerScreenHandler;
+                advanceRefresh(mc);
+            }
+            return;
+        }
+
         if (mc.currentScreen instanceof GenericContainerScreen gcs) {
+            // Rückfall: Fenster wurde doch geöffnet
             refreshOpenTicks++;
             Inventory inv = gcs.getScreenHandler().getInventory();
             boolean loaded = false;
@@ -204,7 +266,6 @@ public class InvTrackerClient implements ClientModInitializer {
                     break;
                 }
             }
-            // Sobald der Inhalt da ist: sofort schließen (Stand wird dabei gespeichert) und den nächsten holen
             if ((loaded && refreshOpenTicks >= 2) || refreshOpenTicks >= 6) {
                 mc.player.closeHandledScreen();
                 advanceRefresh(mc);
@@ -220,7 +281,7 @@ public class InvTrackerClient implements ClientModInitializer {
         if (next == null) {
             refreshCurrent = null;
             refreshing = false;
-            mc.setScreen(new HistoryScreen());
+            if (!(mc.currentScreen instanceof HistoryScreen)) mc.setScreen(new HistoryScreen());
             return;
         }
         refreshCurrent = next;

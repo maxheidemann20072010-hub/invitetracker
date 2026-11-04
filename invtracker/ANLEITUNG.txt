@@ -1,7 +1,7 @@
 Inv Tracker:
 - U = /invsee auf den Spieler im Fadenkreuz (sonst der zuletzt benutzte)
-- J = die letzten 3 angesehenen Inventare nebeneinander; J nochmal = alle aktualisieren
+- J = die letzten 3 angesehenen Inventare nebeneinander; J nochmal = alle im Hintergrund aktualisieren
+  (das Fenster bleibt offen, es oeffnet sich kein Inventar mehr)
 - Links neben jedem Inventar steht klein, wie viel von jeder Sache der Spieler hat
 - K (oder Button "Anzeige links waehlen" im J-Fenster) = auswaehlen, was links angezeigt wird
-Die Anzeige erscheint NUR bei /invsee, nicht bei Kisten, Auktion oder Orders.
-Tasten aendern: Optionen -> Steuerung -> Tastenbelegung -> Inv Tracker.
+Im J-Fenster steht oben [v8]. Steht dort etwas anderes, ist noch die alte jar installiert.

@@ -2,6 +2,7 @@ package de.invtracker;
 
 import net.minecraft.client.MinecraftClient;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -52,9 +53,15 @@ public class HistoryScreen extends Screen {
         wasDown = down;
 
         super.render(ctx, mx, my, delta);
-        ctx.drawCenteredTextWithShadow(textRenderer, title, width / 2, 8, 0xFFFFFFFF);
-        ctx.drawCenteredTextWithShadow(textRenderer, "Taste nochmal drücken = alle aktualisieren",
-                width / 2, height - 14, 0xFFAAAAAA);
+        drawView(ctx, textRenderer, width, height, mx, my,
+                InvTrackerClient.isRefreshing() ? "Aktualisiere …" : "Taste nochmal drücken = alle aktualisieren");
+    }
+
+    /** Zeichnet die 3 Inventare mit den Listen links. Wird auch beim Aktualisieren im Hintergrund benutzt. */
+    public static void drawView(DrawContext ctx, TextRenderer textRenderer, int width, int height,
+                                int mx, int my, String hint) {
+        ctx.drawCenteredTextWithShadow(textRenderer, "Letzte Inventare  [v8]", width / 2, 8, 0xFFFFFFFF);
+        ctx.drawCenteredTextWithShadow(textRenderer, hint, width / 2, height - 14, 0xFFAAAAAA);
 
         List<InvTrackerClient.Entry> list = new ArrayList<>(InvTrackerClient.history);
         if (list.isEmpty()) {
