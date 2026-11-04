@@ -120,6 +120,12 @@ public class InvTrackerClient implements ClientModInitializer {
 
             // Links neben dem Inventar: wie viel von jeder Sache der Spieler hat
             ScreenEvents.afterRender(screen).register((s, ctx, mx, my, delta) -> {
+                if (refreshing) { // beim Aktualisieren das Inventar nicht zeigen
+                    ctx.fill(0, 0, s.width, s.height, 0xFF0D0D12);
+                    ctx.drawCenteredTextWithShadow(mc.textRenderer, "Aktualisiere Inventare …",
+                            s.width / 2, s.height / 2, 0xFFFFFFFF);
+                    return;
+                }
                 if (st.ticks < 3) return;
                 TextRenderer tr = mc.textRenderer;
                 ctx.drawText(tr, "Inhalt: " + target, 6, 30, 0xFFFFFF55, true);
@@ -129,7 +135,7 @@ public class InvTrackerClient implements ClientModInitializer {
 
             // Beim Schließen: Inventar in die Liste der letzten 3 aufnehmen (ersetzt den alten Stand)
             ScreenEvents.remove(screen).register(s -> {
-                if (st.ticks < 3) return;
+                if (st.ticks < 2) return;
                 Entry e = new Entry();
                 e.name = target;
                 e.stacks = st.stacks;
@@ -184,28 +190,43 @@ public class InvTrackerClient implements ClientModInitializer {
             return;
         }
         if (refreshCurrent == null) {
-            String next = refreshQueue.poll();
-            if (next == null) {
-                refreshing = false;
-                mc.setScreen(new HistoryScreen());
-                return;
-            }
-            refreshCurrent = next;
-            refreshTicks = 0;
-            refreshOpenTicks = 0;
-            sendInvsee(mc, next);
+            advanceRefresh(mc);
             return;
         }
         refreshTicks++;
-        if (mc.currentScreen instanceof GenericContainerScreen) {
+        if (mc.currentScreen instanceof GenericContainerScreen gcs) {
             refreshOpenTicks++;
-            if (refreshOpenTicks >= 8) { // Inhalt ist geladen: schließen, Stand wird dabei gespeichert
-                mc.player.closeHandledScreen();
-                refreshCurrent = null;
+            Inventory inv = gcs.getScreenHandler().getInventory();
+            boolean loaded = false;
+            for (int i = 0; i < inv.size(); i++) {
+                if (!inv.getStack(i).isEmpty()) {
+                    loaded = true;
+                    break;
+                }
             }
-        } else if (refreshTicks > 60) {  // Spieler nicht erreichbar: überspringen
-            refreshCurrent = null;
+            // Sobald der Inhalt da ist: sofort schließen (Stand wird dabei gespeichert) und den nächsten holen
+            if ((loaded && refreshOpenTicks >= 2) || refreshOpenTicks >= 6) {
+                mc.player.closeHandledScreen();
+                advanceRefresh(mc);
+            }
+        } else if (refreshTicks > 40) {  // Spieler nicht erreichbar: überspringen
+            advanceRefresh(mc);
         }
+    }
+
+    /** Nächsten Spieler abfragen, im selben Tick wie das Schließen des vorigen. */
+    private static void advanceRefresh(MinecraftClient mc) {
+        String next = refreshQueue.poll();
+        if (next == null) {
+            refreshCurrent = null;
+            refreshing = false;
+            mc.setScreen(new HistoryScreen());
+            return;
+        }
+        refreshCurrent = next;
+        refreshTicks = 0;
+        refreshOpenTicks = 0;
+        sendInvsee(mc, next);
     }
 
     /** Zeilenhöhe der kleinen Liste links. */
